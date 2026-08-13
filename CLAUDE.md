@@ -61,10 +61,19 @@ identical across runs. Generated files carry a marker and the writer refuses to
 replace a file that lacks it unless `--force` is passed. 185 tests green,
 including an end-to-end CLI test over a real temporary git repository.
 
-Next: milestone 5 — `check`, staleness classification against the pinned
-commit. Note CodeTour already warns on a moved `ref`, so the value milestone 5
-has to add is the case no tool handles: a file has appeared that outranks an
-existing station.
+Milestone 5 done: `check` classifies every station against the pinned commit
+(fresh / lines shifted / answers changed / moved / deleted), reports files that
+would now be selected over what is in the tour, and exits 1 when anything needs
+attention. 226 tests green. Classification lives in `staleness.py` as pure
+functions over data gathered by `git_signals.py`, so every number the CLI
+prints is derived from the run rather than asserted beside it.
+
+All five milestones are done. Before adding features, read the defect recorded
+under "Milestone 5" in NOTES.md: selection picks empty `__init__.py` files that
+cannot become stations, so tours can come out below the documented minimum of
+five. It needs an evaluation harness before it can be fixed responsibly —
+`eval/repos.toml` is still empty placeholders, and the README's results table
+still says "pending".
 
 Known gaps deliberately left open during milestone 2 are listed in NOTES.md;
 read them before extending the scoring model, and do not silently rely on

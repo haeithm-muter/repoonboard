@@ -126,6 +126,35 @@ def to_codetour(tour: Tour) -> str:
 
 
 # ---------------------------------------------------------------------------
+# stations.json — the machine-readable record `check` reads back
+# ---------------------------------------------------------------------------
+
+
+def to_json_payload(tour: Tour) -> str:
+    """Serialise the tour for `check`.
+
+    Carries the anchor line and layer as well as the prose, because staleness
+    is judged against every line the tour sends a reader to — the anchor
+    included, not just the answer locations.
+    """
+    document = {
+        "generator": MARKER,
+        "repository": tour.repository,
+        "commit": tour.commit,
+        "stations": [
+            {
+                "path": station.path,
+                "layer": station.layer,
+                "anchor_line": station.anchor_line,
+                **station.explanation.model_dump(mode="json"),
+            }
+            for station in tour.stations
+        ],
+    }
+    return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
+
+
+# ---------------------------------------------------------------------------
 # ONBOARDING.md
 # ---------------------------------------------------------------------------
 

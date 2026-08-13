@@ -86,6 +86,42 @@ team already keeps there. Generated files carry a marker and anything without
 it is refused rather than replaced, but that check is content-based: a hand-
 written file that happens to quote the marker string would be overwritten.
 
+## Milestone 5 (done)
+
+226 tests green. `check` classifies every station against the pinned commit
+and exits 1 when anything needs attention, so it can gate CI.
+
+**Weakest assumption so far:** that "the file changed below every cited line"
+means the station is still fine. It is true for line numbers and false for
+meaning — appending a function that changes how an existing one behaves leaves
+every cited range untouched while making the explanation wrong. `check` is a
+line-range diff, not a semantic one, and it cannot see that. This is the same
+boundary the grounding gate has: both verify structure, neither verifies truth.
+
+**What will break on a real repository:** rename detection is git's, with the
+default similarity threshold. A file that was renamed *and* heavily rewritten
+in the same commit is reported as a delete plus a newcomer rather than a move,
+which overstates the damage. Second, `check` compares against the working tree
+rather than HEAD, so a dirty tree reports staleness that a clean CI checkout
+would not — deliberate, documented in the command's docstring and in the
+output, but it will surprise someone.
+
+### Defect this milestone uncovered
+
+**Selection picks files that cannot be stations.** `select_stations` chose two
+empty `__init__.py` files in the end-to-end fixture. `generate` then refuses
+them (no anchor line), so the tour silently came out with 4 stations against a
+documented minimum of 5, and `check` initially reported those same files as
+"newly outranking the tour" on a tour generated seconds earlier.
+
+`check` now compares like with like — it filters the current selection through
+the same "could this be a station?" rule — so the false positive is gone. The
+underlying problem is not: selection does not know that an empty file cannot
+carry a station, so tours can still come out undersized. The fix belongs in
+`select_stations`, and per `weights.toml` any change there has to be
+re-evaluated against `eval/repos.toml`, which is still empty. Left open
+deliberately rather than patched blind.
+
 ## Findings carried into milestone 3
 
 Recorded during the milestone 2 review, deliberately not fixed yet.

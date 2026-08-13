@@ -42,9 +42,15 @@ Four decisions hold the whole design up:
    and every question carries the location of its answer in the code — file
    and line range. Passive reading becomes active recall.
 4. **The tour knows when it is stale.** Tours are pinned to a commit hash.
-   `repoonboard check` classifies each station after the code moves, including
-   the case no documentation tool handles: a file has appeared that scores
-   higher than an existing station, so the tour itself is now incomplete.
+   `repoonboard check` classifies each station after the code moves — *fresh*,
+   *lines shifted*, *answers changed*, *moved*, *deleted* — and handles the
+   case no documentation tool does: a file has appeared that now outranks a
+   station, so the tour is not wrong, it is incomplete. It exits non-zero when
+   anything needs attention, so it can gate CI.
+
+   What it does not do is judge meaning. `check` compares line ranges. Code
+   appended below every cited line can still make an explanation wrong, and
+   nothing here will notice.
 
 ## Commands
 
@@ -53,7 +59,7 @@ Four decisions hold the whole design up:
 | `analyze` | Inventory the repository: files kept, files filtered, churn per file | ✅ working |
 | `plan` | Select and order stations — no model call at all | ✅ working |
 | `generate` | Write grounded explanations, questions, and all four output files | ✅ working |
-| `check` | Report which stations went stale since the tour was pinned | 🚧 milestone 5 |
+| `check` | Report which stations went stale since the tour was pinned | ✅ working |
 
 `generate` writes four files:
 

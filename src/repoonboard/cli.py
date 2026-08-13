@@ -20,14 +20,23 @@ from .export import (
     TourStation,
     is_generated,
     to_codetour,
+    to_json_payload,
     to_markdown,
     to_mermaid,
 )
 from .generation import UnverifiableStation, generate_station
-from .git_signals import churn, head_commit, is_git_repository
+from .git_signals import (
+    changed_line_ranges,
+    changed_paths,
+    churn,
+    commit_exists,
+    head_commit,
+    is_git_repository,
+)
 from .graph import build
 from .model import DEFAULT_MODEL, AnthropicGenerator, CachingGenerator
 from .snippets import build_for_file
+from .staleness import State, build_report, cited_ranges
 from .stations import order_stations, select_stations
 
 OUTPUT_DIR = ".repoonboard"
@@ -252,7 +261,7 @@ def generate(
     )
 
     _report(path, results, skipped)
-    written = _write(Path(path), tour, results, force)
+    written = _write(Path(path), tour, force)
     for destination in written:
         console.print(f"Wrote [bold]{destination}[/bold]")
 
@@ -302,7 +311,7 @@ def _report(path: Path, results: list, skipped: list[tuple[str, str]]) -> None:
         console.print(f"[red]Skipped {station_path}[/red]: {reason}")
 
 
-def _write(root: Path, tour: Tour, results: list, force: bool) -> list[Path]:
+def _write(root: Path, tour: Tour, force: bool) -> list[Path]:
     """Write the four artefacts and return where they went.
 
     The `.tour` goes where CodeTour looks for it; the two readable files go to
@@ -321,18 +330,7 @@ def _write(root: Path, tour: Tour, results: list, force: bool) -> list[Path]:
     tours.mkdir(parents=True, exist_ok=True)
 
     stations_json = internal / "stations.json"
-    stations_json.write_text(
-        json.dumps(
-            {
-                "commit": tour.commit,
-                "stations": [r.explanation.model_dump(mode="json") for r in results],
-            },
-            indent=2,
-            ensure_ascii=False,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    stations_json.write_text(to_json_payload(tour), encoding="utf-8")
 
     written = [stations_json]
     refused: list[Path] = []
@@ -369,10 +367,185 @@ def _write(root: Path, tour: Tour, results: list, force: bool) -> list[Path]:
 
 
 @app.command()
-def check(path: Path = typer.Argument(..., help="Path to a repository holding a tour.")) -> None:
-    """Report which stations went stale since the tour was pinned."""
-    console.print("[yellow]Not implemented yet — milestone 5.[/yellow]")
-    raise typer.Exit(code=3)
+def check(
+    path: Path = typer.Argument(..., help="Path to a repository holding a tour."),
+    subdir: str = typer.Option(None, "--subdir", help="Restrict analysis to one subdirectory."),
+) -> None:
+    """Report which stations went stale since the tour was pinned.
+
+    The comparison runs from the pinned commit to the *working tree*, not to
+    HEAD, so uncommitted edits count as staleness. That is what you want when
+    asking "is my tour still good right now"; in CI, where the tree is clean,
+    it reduces to the pinned-commit-to-HEAD diff.
+
+    Exits 0 when the tour is current and 1 when anything needs attention, so
+    it can be run in CI.
+    """
+    import json
+
+    root = Path(path)
+    stations_file = root / OUTPUT_DIR / "stations.json"
+    if not stations_file.is_file():
+        console.print(
+            f"[red]No tour found at {stations_file}.[/red]\n"
+            "Run `repoonboard generate` first."
+        )
+        raise typer.Exit(code=1)
+
+    try:
+        payload = json.loads(stations_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        console.print(f"[red]Could not read {stations_file}:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    pinned = payload.get("commit")
+    if not pinned:
+        console.print(
+            "[red]This tour was not pinned to a commit[/red], so there is no "
+            "baseline to compare against. It was generated from a directory "
+            "without Git history."
+        )
+        raise typer.Exit(code=1)
+
+    if not is_git_repository(root):
+        console.print(f"[red]{root} is not a git repository.[/red]")
+        raise typer.Exit(code=1)
+
+    if not commit_exists(root, pinned):
+        console.print(
+            f"[red]The pinned commit {pinned[:12]} is not in this clone's "
+            "history.[/red]\nIt may have been rebased away, force-pushed over, "
+            "or this may be a shallow clone. Re-run `repoonboard generate`."
+        )
+        raise typer.Exit(code=1)
+
+    stations = payload.get("stations", [])
+    changes = changed_paths(root, pinned)
+    ranges_for = {
+        station["path"]: changed_line_ranges(root, pinned, station["path"])
+        for station in stations
+        if station.get("path") in changes and changes[station["path"]][0] == "M"
+    }
+
+    repo_graph = build(root, subdir)
+    current = order_stations(repo_graph, select_stations(repo_graph)).stations
+
+    report = build_report(
+        pinned=pinned,
+        head=head_commit(root),
+        stations=[(s["path"], cited_ranges(s)) for s in stations],
+        changes=changes,
+        ranges_for=ranges_for,
+        current_selection=_stationable(root, current, subdir),
+    )
+
+    _report_staleness(report)
+    raise typer.Exit(code=0 if report.is_current else 1)
+
+
+def _stationable(root: Path, selected: list[Path], subdir: str | None) -> list[str]:
+    """Of the files selection would pick now, those that could be stations.
+
+    `generate` refuses a file with no line to open at — an empty `__init__.py`,
+    a pure re-export barrel. Comparing the tour against the raw selection would
+    therefore report such a file as newly outranking the tour on every run,
+    including the run immediately after `generate`. The comparison has to be
+    like for like: what would be selected *and* could actually be explained.
+    """
+    languages = {item.path: item.language for item in discover(root, subdir)}
+
+    usable: list[str] = []
+    for path in selected:
+        language = languages.get(path)
+        if language is None:
+            continue
+        try:
+            snippet = build_for_file(root, path, language)
+        except OSError:
+            continue
+        if snippet.anchor_line is not None:
+            usable.append(path.as_posix())
+    return usable
+
+
+_STATE_COLOUR = {
+    State.FRESH: "green",
+    State.LINES_SHIFTED: "yellow",
+    State.ANSWERS_CHANGED: "red",
+    State.MOVED: "yellow",
+    State.DELETED: "red",
+}
+
+
+def _report_staleness(report) -> None:
+    """Print the run's findings.
+
+    Every sentence below is derived from the report. Nothing here asserts a
+    count, an outcome, or a reassurance that was not computed from this run.
+    """
+    table = Table(
+        title=f"Tour pinned at {report.pinned[:12]} · HEAD {report.head[:12]}",
+        header_style="bold",
+    )
+    table.add_column("Station")
+    table.add_column("State")
+    table.add_column("Detail")
+
+    for verdict in report.verdicts:
+        colour = _STATE_COLOUR[verdict.state]
+        table.add_row(
+            verdict.path,
+            f"[{colour}]{verdict.state.value}[/{colour}]",
+            verdict.detail,
+        )
+    console.print(table)
+
+    stale = report.stale
+    total = len(report.verdicts)
+
+    if report.pinned == report.head:
+        # Comparison runs against the working tree, not against HEAD, so a
+        # finding here can only have come from uncommitted edits. Saying which
+        # it was beats leaving the reader to reconcile two true statements.
+        if stale or report.now_outranking:
+            console.print(
+                "[dim]HEAD is still the pinned commit, so everything below comes "
+                "from uncommitted changes in the working tree.[/dim]"
+            )
+        else:
+            console.print("[dim]HEAD is the pinned commit.[/dim]")
+
+    if stale:
+        console.print(
+            f"[yellow]{len(stale)} of {total} station(s) need attention.[/yellow]"
+        )
+    elif total:
+        console.print(f"[green]All {total} station(s) still hold.[/green]")
+
+    if report.now_outranking:
+        console.print(
+            f"\n[red]{len(report.now_outranking)} file(s) would now be selected "
+            "over what is in the tour:[/red]"
+        )
+        for candidate in report.now_outranking:
+            console.print(f"  {candidate}")
+        console.print(
+            "[dim]This is the case a text diff cannot see: the tour is not "
+            "wrong, it is incomplete.[/dim]"
+        )
+
+    if report.no_longer_selected:
+        console.print(
+            f"\n[yellow]{len(report.no_longer_selected)} station(s) would no "
+            "longer be selected:[/yellow]"
+        )
+        for candidate in report.no_longer_selected:
+            console.print(f"  {candidate}")
+
+    if report.is_current:
+        console.print("\n[green]The tour is current.[/green]")
+    else:
+        console.print("\nRe-run [bold]repoonboard generate[/bold] to rebuild it.")
 
 
 @app.command()

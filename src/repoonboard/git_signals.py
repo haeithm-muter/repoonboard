@@ -6,6 +6,7 @@ year is load-bearing whatever the import graph says about it.
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
@@ -30,6 +31,71 @@ def _run_git(root: Path, *args: str) -> str:
 def head_commit(root: Path) -> str:
     """Full hash of HEAD. Every generated tour is pinned to this."""
     return _run_git(root, "rev-parse", "HEAD").strip()
+
+
+def commit_exists(root: Path, sha: str) -> bool:
+    """True when the pinned commit is actually reachable in this clone.
+
+    A tour can outlive the history it was pinned to — a rebase, a force-push,
+    or a shallow clone all remove the commit. Saying so is better than
+    silently diffing against something else.
+    """
+    try:
+        _run_git(root, "cat-file", "-e", f"{sha}^{{commit}}")
+    except NotAGitRepository:
+        return False
+    return True
+
+
+def changed_paths(root: Path, base: str) -> dict[str, tuple[str, str | None]]:
+    """What happened to every file between `base` and the working tree.
+
+    Returns a mapping of the path *as it was at `base`* to a (status, new path)
+    pair, where status is one of "M", "A", "D" or "R". Keying on the old path
+    is what lets a station recorded against the pinned commit be looked up at
+    all — after a rename, its own path no longer exists.
+    """
+    output = _run_git(root, "diff", "--name-status", "-M", base)
+
+    changes: dict[str, tuple[str, str | None]] = {}
+    for line in output.splitlines():
+        if not line.strip():
+            continue
+        fields = line.split("\t")
+        code = fields[0]
+        if code.startswith("R") and len(fields) >= 3:
+            changes[fields[1]] = ("R", fields[2])
+        elif len(fields) >= 2:
+            changes[fields[1]] = (code[0], None)
+    return changes
+
+
+_HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+\d+(?:,\d+)? @@")
+
+
+def changed_line_ranges(root: Path, base: str, path: str) -> list[tuple[int, int]]:
+    """Line ranges of `path` that changed since `base`, in `base` coordinates.
+
+    Ranges are expressed against the *old* file because that is the coordinate
+    system a pinned tour's answer locations live in. A pure insertion has no
+    old lines, so it is reported as the zero-width point it follows — text
+    appearing in the middle of a cited range does change what a reader finds
+    there, even though no old line was touched.
+    """
+    output = _run_git(root, "diff", "-U0", base, "--", path)
+
+    ranges: list[tuple[int, int]] = []
+    for line in output.splitlines():
+        match = _HUNK.match(line)
+        if match is None:
+            continue
+        start = int(match.group(1))
+        count = 1 if match.group(2) is None else int(match.group(2))
+        if count == 0:
+            ranges.append((start, start))  # insertion after old line `start`
+        else:
+            ranges.append((start, start + count - 1))
+    return ranges
 
 
 def churn(root: Path, months: int = 12) -> dict[str, int]:
