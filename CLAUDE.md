@@ -54,8 +54,19 @@ Note the gate's real limit before extending it: it verifies paths, symbols,
 question count and answer locations — all structural. It does not verify that
 a sentence is true. See NOTES.md.
 
-Next: milestone 4 — export to `.tour`, `ONBOARDING.md` and `architecture.mmd`.
+Milestone 4 done too: `generate` writes `.tours/onboarding.tour`,
+`ONBOARDING.md`, `architecture.mmd` and `.repoonboard/stations.json`. Export is
+a pure function of a `Tour` value — no filesystem reads, no model calls, byte-
+identical across runs. Generated files carry a marker and the writer refuses to
+replace a file that lacks it unless `--force` is passed. 185 tests green,
+including an end-to-end CLI test over a real temporary git repository.
+
+Next: milestone 5 — `check`, staleness classification against the pinned
+commit. Note CodeTour already warns on a moved `ref`, so the value milestone 5
+has to add is the case no tool handles: a file has appeared that outranks an
+existing station.
+
 Known gaps deliberately left open during milestone 2 are listed in NOTES.md;
 read them before extending the scoring model, and do not silently rely on
 `doc_signal`. `ruff check` is not clean on the milestone 1-2 modules by
-design; it is clean on everything added in milestone 3.
+design; it is clean on everything added in milestones 3 and 4.

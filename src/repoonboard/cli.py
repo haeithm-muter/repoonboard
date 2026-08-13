@@ -15,6 +15,14 @@ from rich.table import Table
 from . import __version__
 from .discovery import MAX_FILES, discover, dominant_languages
 from .explanation import Provenance
+from .export import (
+    Tour,
+    TourStation,
+    is_generated,
+    to_codetour,
+    to_markdown,
+    to_mermaid,
+)
 from .generation import UnverifiableStation, generate_station
 from .git_signals import churn, head_commit, is_git_repository
 from .graph import build
@@ -163,6 +171,11 @@ def generate(
         help="Skip the model entirely and use structural explanations only.",
     ),
     model: str = typer.Option(DEFAULT_MODEL, "--model", help="Model used for explanations."),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Overwrite ONBOARDING.md or architecture.mmd even if this tool did not write them.",
+    ),
 ) -> None:
     """Write grounded explanations and verification questions for each station.
 
@@ -193,6 +206,7 @@ def generate(
         )
 
     results = []
+    tour_stations: list[TourStation] = []
     skipped: list[tuple[str, str]] = []
 
     for station_path in ordering.stations:
@@ -214,9 +228,33 @@ def generate(
             continue
 
         results.append(result)
+        assert snippet.anchor_line is not None  # guaranteed by generate_station
+        tour_stations.append(
+            TourStation(
+                path=station_path.as_posix(),
+                layer=station.layer,
+                anchor_line=snippet.anchor_line,
+                explanation=result.explanation,
+            )
+        )
+
+    selected = {station.path for station in tour_stations}
+    tour = Tour(
+        repository=Path(path).resolve().name,
+        commit=pinned,
+        stations=tuple(tour_stations),
+        edges=tuple(
+            (source.as_posix(), target.as_posix())
+            for source, target in repo_graph.graph.edges
+            if source.as_posix() in selected and target.as_posix() in selected
+        ),
+        resolution_rate=repo_graph.resolution_rate,
+    )
 
     _report(path, results, skipped)
-    _write(Path(path), pinned, results)
+    written = _write(Path(path), tour, results, force)
+    for destination in written:
+        console.print(f"Wrote [bold]{destination}[/bold]")
 
 
 def _report(path: Path, results: list, skipped: list[tuple[str, str]]) -> None:
@@ -264,23 +302,70 @@ def _report(path: Path, results: list, skipped: list[tuple[str, str]]) -> None:
         console.print(f"[red]Skipped {station_path}[/red]: {reason}")
 
 
-def _write(root: Path, pinned: str | None, results: list) -> None:
+def _write(root: Path, tour: Tour, results: list, force: bool) -> list[Path]:
+    """Write the four artefacts and return where they went.
+
+    The `.tour` goes where CodeTour looks for it; the two readable files go to
+    the repository root, because a reader who does not use VS Code should not
+    have to know that `.repoonboard/` exists.
+
+    Writing to the root means a hand-written `ONBOARDING.md` could already be
+    there. Anything without this tool's marker is left alone and reported,
+    rather than replaced.
+    """
     import json
 
-    directory = root / OUTPUT_DIR
-    directory.mkdir(parents=True, exist_ok=True)
-    destination = directory / "stations.json"
+    internal = root / OUTPUT_DIR
+    internal.mkdir(parents=True, exist_ok=True)
+    tours = root / ".tours"
+    tours.mkdir(parents=True, exist_ok=True)
 
-    payload = {
-        "commit": pinned,
-        "stations": [
-            result.explanation.model_dump(mode="json") for result in results
-        ],
-    }
-    destination.write_text(
-        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    stations_json = internal / "stations.json"
+    stations_json.write_text(
+        json.dumps(
+            {
+                "commit": tour.commit,
+                "stations": [r.explanation.model_dump(mode="json") for r in results],
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
     )
-    console.print(f"Wrote [bold]{destination}[/bold]")
+
+    written = [stations_json]
+    refused: list[Path] = []
+
+    for destination, content in (
+        (tours / "onboarding.tour", to_codetour(tour)),
+        (root / "ONBOARDING.md", to_markdown(tour)),
+        (root / "architecture.mmd", to_mermaid(tour)),
+    ):
+        if destination.exists() and not force:
+            try:
+                existing = destination.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                existing = ""
+            if not is_generated(existing):
+                refused.append(destination)
+                continue
+
+        destination.write_text(content, encoding="utf-8")
+        written.append(destination)
+
+    if refused:
+        console.print(
+            "\n[red]Refused to overwrite file(s) this tool did not write:[/red]"
+        )
+        for destination in refused:
+            console.print(f"  {destination}")
+        console.print(
+            "[yellow]Move or rename them, or re-run with --force to replace "
+            "them.[/yellow]"
+        )
+
+    return written
 
 
 @app.command()

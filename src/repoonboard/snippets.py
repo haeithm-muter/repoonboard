@@ -76,6 +76,10 @@ class Snippet:
     import_lines: frozenset[int]
     regions: tuple[Region, ...]
     text: str
+    # The line a tour step should open at. Never an import line, never a line
+    # that was elided, never blank — a station that opens on `import os`
+    # teaches nothing, which is why CLAUDE.md forbids it outright.
+    anchor_line: int | None = None
 
     def covers(self, line: int) -> bool:
         """True when a line was actually shown to the model."""
@@ -257,6 +261,33 @@ def _render(source_lines: list[str], regions: tuple[Region, ...]) -> str:
     return "\n".join(out)
 
 
+def _anchor_line(
+    source_lines: list[str],
+    symbols: tuple[Symbol, ...],
+    imports: frozenset[int],
+    regions: tuple[Region, ...],
+) -> int | None:
+    """Pick the line a tour step should open at.
+
+    Preference order: the first top-level definition, because that is where a
+    reader's attention belongs; then the first shown line carrying anything at
+    all. Import lines are excluded at every step — opening a station on an
+    import is the one placement CLAUDE.md rules out.
+    """
+
+    def shown(line: int) -> bool:
+        return any(region.contains(line) for region in regions)
+
+    for symbol in symbols:
+        if shown(symbol.start_line) and symbol.start_line not in imports:
+            return symbol.start_line
+
+    for line in range(1, len(source_lines) + 1):
+        if shown(line) and line not in imports and source_lines[line - 1].strip():
+            return line
+    return None
+
+
 def build(
     path: Path, source_bytes: bytes, language: str, budget: int = DEFAULT_BUDGET
 ) -> Snippet:
@@ -287,6 +318,7 @@ def build(
             import_lines=imports,
             regions=regions,
             text=_render(source_lines, regions),
+            anchor_line=_anchor_line(source_lines, symbols, imports, regions),
         )
 
     # Always keep the header: the docstring and the imports establish what the
@@ -312,6 +344,7 @@ def build(
         import_lines=imports,
         regions=regions,
         text=_render(source_lines, regions),
+        anchor_line=_anchor_line(source_lines, symbols, imports, regions),
     )
 
 

@@ -55,6 +55,37 @@ re-export barrels raise `UnverifiableStation` rather than producing a station,
 which is honest but means station count can silently drop below the minimum
 of five; selection does not yet know that a barrel is unusable.
 
+## Milestone 4 (done)
+
+185 tests green. `generate` writes `.tours/onboarding.tour`, `ONBOARDING.md`,
+`architecture.mmd` and `.repoonboard/stations.json`, all from one `Tour` value.
+The suite gained its first end-to-end CLI test, which builds a real git
+repository in a temp directory and asserts on the files that come out.
+
+**Weakest assumption so far:** that a station's anchor line — the line the tour
+opens at — is well chosen by taking the first top-level definition. It is
+*safe* (never an import, never elided, never blank, and tested on all three),
+but "first definition in the file" is not the same as "the line that best
+explains this file". A module whose interesting function is its fourth will
+open on its least interesting one. Nothing measures this yet.
+
+The `.tour` `ref` field is doing real work: CodeTour itself warns when the
+working tree has moved past the pinned commit. That covers the simple staleness
+case for free, and leaves milestone 5 the harder question the README actually
+promises — a file has appeared that outranks an existing station.
+
+**What will break on a real repository:** `architecture.mmd` draws only direct
+import edges between selected stations. On a repository where stations sit two
+or three hops apart, the diagram will be a set of disconnected boxes — honest,
+but not useful. Drawing transitive edges would be a lie about the code, so the
+fix is either to label the hop count or to say plainly that no direct edges
+exist; currently it does the latter and nothing more.
+
+Writing `ONBOARDING.md` into the repository root can collide with a file the
+team already keeps there. Generated files carry a marker and anything without
+it is refused rather than replaced, but that check is content-based: a hand-
+written file that happens to quote the marker string would be overwritten.
+
 ## Findings carried into milestone 3
 
 Recorded during the milestone 2 review, deliberately not fixed yet.

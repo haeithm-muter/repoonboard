@@ -52,9 +52,21 @@ Four decisions hold the whole design up:
 |---------|--------------|--------|
 | `analyze` | Inventory the repository: files kept, files filtered, churn per file | ✅ working |
 | `plan` | Select and order stations — no model call at all | ✅ working |
-| `generate` | Write grounded explanations and verification questions | ✅ working |
-| `generate` | Export `.tour`, `ONBOARDING.md`, `architecture.mmd` | 🚧 milestone 4 |
+| `generate` | Write grounded explanations, questions, and all four output files | ✅ working |
 | `check` | Report which stations went stale since the tour was pinned | 🚧 milestone 5 |
+
+`generate` writes four files:
+
+| File | For |
+|------|-----|
+| `.tours/onboarding.tour` | CodeTour in VS Code — opens each station at the right line, and warns when the pinned commit has moved |
+| `ONBOARDING.md` | Everyone who doesn't use VS Code |
+| `architecture.mmd` | A Mermaid graph of the stations and the import edges that actually exist between them |
+| `.repoonboard/stations.json` | The machine-readable tour, pinned to the commit |
+
+`ONBOARDING.md` and `architecture.mmd` land in the repository root, so they
+carry a generated-file marker: a file without that marker is never replaced
+unless you pass `--force`.
 
 `generate --dry-run` runs the entire pipeline with no model and no network,
 producing structural explanations only. It is the fastest way to see what the

@@ -100,6 +100,17 @@ def generate_station(
     model.
     """
     path = snippet.path.as_posix()
+
+    # Checked before anything is spent on this file. A station has to open
+    # somewhere, and "somewhere" may not be an import line — a file offering no
+    # other line cannot be a station at all.
+    if snippet.anchor_line is None:
+        raise UnverifiableStation(
+            f"{path} has no line a station could open at: every line shown is an "
+            "import or blank. A file that only re-exports cannot be a station, "
+            "because there is nothing in it to verify."
+        )
+
     if generator is None:
         return _structural_result(snippet, layer, signals, known_paths, attempts=0)
 
