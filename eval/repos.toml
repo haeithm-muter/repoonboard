@@ -1,0 +1,43 @@
+# The four evaluation repositories. Pin these on day one, not at the end:
+# every claim in the README is measured against them.
+#
+# Criteria: 50-500 source files, actively maintained, architecturally
+# different from each other, two Python and two TypeScript.
+#
+# Ground truth for each repo is the union of three sources independent of
+# the author's judgement:
+#   1. files named in CONTRIBUTING.md
+#   2. the ten most-committed files
+#   3. files referenced from "good first issue" threads
+
+[[repo]]
+name = ""
+url = ""
+commit = ""      # full hash — the number is meaningless without it
+language = "python"
+file_count = 0
+ground_truth = []
+
+[[repo]]
+name = ""
+url = ""
+commit = ""
+language = "python"
+file_count = 0
+ground_truth = []
+
+[[repo]]
+name = ""
+url = ""
+commit = ""
+language = "typescript"
+file_count = 0
+ground_truth = []
+
+[[repo]]
+name = ""
+url = ""
+commit = ""
+language = "typescript"
+file_count = 0
+ground_truth = []

@@ -1,0 +1,27 @@
+# Importance weights. Tunable, and every component is reported by --explain.
+# Changing these changes station selection, so any change must be re-evaluated
+# against the pinned repositories in eval/repos.toml.
+
+[importance]
+pagerank_reversed  = 0.35   # how widely the file is imported
+fan_in_normalized  = 0.20   # how many files import it
+entry_proximity    = 0.15   # 1 / (1 + distance to nearest entry point)
+churn_normalized   = 0.15   # commits in the last 12 months
+test_coverage      = 0.10   # how many test files reference it
+doc_signal         = 0.05   # named in README, or carries a module docstring
+
+[entry_points]
+# Weighted signals; a file is an entry point at or above the threshold.
+threshold                = 4
+named_in_manifest        = 5   # package.json / pyproject.toml scripts
+conventional_filename    = 4   # main.py, index.ts, app.py
+main_guard_or_app_init   = 4   # if __name__ == "__main__", createApp()
+zero_in_degree_high_out  = 3
+dockerfile_or_makefile   = 3
+named_in_readme_codeblock = 2
+
+[selection]
+min_stations       = 5
+max_stations       = 8
+require_layer_mix  = true   # at least one station per layer present
+same_folder_repeat = false  # unless the two files sit in different layers
