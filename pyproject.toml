@@ -46,3 +46,22 @@ pythonpath = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+# typer's whole API is `def cmd(x: T = typer.Option(...))`. B008 flags exactly
+# that idiom, and the suggested workaround would make every command harder to
+# read for no benefit.
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# Findings recorded under "Findings carried into milestone 3" in NOTES.md.
+# They are real and deliberately unfixed: changing station selection needs the
+# evaluation harness first. Listing them here rather than leaving `ruff check`
+# permanently red means CI can gate on the linter for real, and any *new*
+# finding shows up instead of being lost in known noise. Delete an entry once
+# the underlying issue is fixed.
+"src/repoonboard/stations.py" = ["F401", "SIM222"]
+"src/repoonboard/graph.py" = ["F841"]
+"src/repoonboard/imports.py" = ["PIE810"]
+"src/repoonboard/cli.py" = ["F841"]
+"tests/test_imports.py" = ["I001"]

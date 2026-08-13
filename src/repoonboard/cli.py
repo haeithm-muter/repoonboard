@@ -322,8 +322,6 @@ def _write(root: Path, tour: Tour, force: bool) -> list[Path]:
     there. Anything without this tool's marker is left alone and reported,
     rather than replaced.
     """
-    import json
-
     internal = root / OUTPUT_DIR
     internal.mkdir(parents=True, exist_ok=True)
     tours = root / ".tours"

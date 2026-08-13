@@ -9,35 +9,72 @@
 #   1. files named in CONTRIBUTING.md
 #   2. the ten most-committed files
 #   3. files referenced from "good first issue" threads
+#
+# ---------------------------------------------------------------------------
+# Every number below was measured, not estimated. `source_files` and
+# `discovered_files` come from running this project's own discovery rules over
+# the pinned tree; `discovered_files` includes tests, and is recorded because
+# it is the number checked against MAX_FILES (1500). `good_first_issue_count`
+# comes from the GitHub search API. Re-measure with eval/survey.py if you
+# change a pin.
+#
+# One caveat is recorded rather than hidden: hono carries no `good first issue`
+# label at all, so its ground truth is the union of two sources, not three.
+# That label turned out to be absent from most repositories surveyed
+# (apollo-client, ink, seaborn and hono all had zero), which is a limitation of
+# the three-source method itself, not of these repositories. The harness
+# records which sources contributed per repository and the results table
+# reports it.
+# ---------------------------------------------------------------------------
 
 [[repo]]
-name = ""
-url = ""
-commit = ""      # full hash — the number is meaningless without it
+name = "scrapy"
+url = "https://github.com/scrapy/scrapy"
+commit = "ca48915dd4f6c388be741a97213df03e7a81ea89"  # full hash — the number is meaningless without it
+branch = "master"
 language = "python"
-file_count = 0
+architecture = "Event-driven crawling framework: middleware chains, item pipelines, spider contracts, Twisted reactor."
+file_count = 183
+discovered_files = 476
+contributing_path = "CONTRIBUTING.md"
+good_first_issue_count = 206
 ground_truth = []
 
 [[repo]]
-name = ""
-url = ""
-commit = ""
+name = "poetry"
+url = "https://github.com/python-poetry/poetry"
+commit = "92b74dcfe348d0e01e14d40d6c1fa47a4ee04a54"
+branch = "main"
 language = "python"
-file_count = 0
+architecture = "CLI application: cleo command layer over a dependency solver, installer and VCS integration."
+file_count = 170
+discovered_files = 405
+contributing_path = "docs/contributing.md"
+good_first_issue_count = 35
 ground_truth = []
 
 [[repo]]
-name = ""
-url = ""
-commit = ""
+name = "kysely"
+url = "https://github.com/kysely-org/kysely"
+commit = "f24018c789c3cf7ad03ccc672ada63a1ded87f88"
+branch = "master"
 language = "typescript"
-file_count = 0
+architecture = "Type-driven query builder: builder chain compiles to an operation-node AST, then to SQL through dialect plugins."
+file_count = 408
+discovered_files = 522
+contributing_path = "CONTRIBUTING.md"
+good_first_issue_count = 42
 ground_truth = []
 
 [[repo]]
-name = ""
-url = ""
-commit = ""
+name = "hono"
+url = "https://github.com/honojs/hono"
+commit = "41bdc4288ed7023c24d35f32bd065bd963435e3e"
+branch = "main"
 language = "typescript"
-file_count = 0
+architecture = "HTTP framework: interchangeable router implementations, middleware stack, per-runtime adapters."
+file_count = 219
+discovered_files = 355
+contributing_path = "docs/CONTRIBUTING.md"
+good_first_issue_count = 0  # no such label in this repository — ground truth is two-source
 ground_truth = []
