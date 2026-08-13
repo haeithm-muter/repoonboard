@@ -74,14 +74,33 @@ def commit_counts(target: Path, commit: str) -> dict[str, int]:
     return counts
 
 
-def read_contributing(target: Path, relative: str | None) -> str:
-    if not relative:
-        return ""
-    path = target / relative
-    if not path.is_file():
-        print(f"  ! CONTRIBUTING not found at {relative}")
-        return ""
-    return path.read_text(encoding="utf-8", errors="replace")
+DOC_SUFFIXES = (".md", ".rst", ".mdx", ".txt")
+
+
+def read_documentation(target: Path) -> tuple[str, int]:
+    """Every prose file in the tree, concatenated.
+
+    Not just `docs/`: kysely keeps its documentation under `site/` and hono
+    keeps its in a separate repository, so restricting the search to a
+    conventional directory understates both. CONTRIBUTING files are included
+    rather than excluded — they were measured to contribute nothing, and
+    leaving them in costs nothing and keeps the rule simple.
+    """
+    files = [
+        path
+        for path in sorted(target.rglob("*"))
+        if path.is_file()
+        and path.suffix.lower() in DOC_SUFFIXES
+        and ".git" not in path.parts
+        and "node_modules" not in path.parts
+    ]
+    chunks = []
+    for path in files:
+        try:
+            chunks.append(path.read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            continue
+    return "\n".join(chunks), len(files)
 
 
 def api_get(url: str, token: str | None) -> dict | None:
@@ -176,7 +195,8 @@ def main() -> int:
         print(f"  discovered {len(files)} files, {len(known)} non-test source files")
 
         counts = commit_counts(target, entry["commit"])
-        contributing = read_contributing(target, entry.get("contributing_path"))
+        documentation, prose_files = read_documentation(target)
+        print(f"  read {prose_files} prose files")
         issues = (
             issue_texts(slug, args.token, args.pause, args.comments)
             if entry.get("good_first_issue_count", 0)
@@ -184,7 +204,7 @@ def main() -> int:
         )
 
         truth = build_ground_truth(
-            contributing_text=contributing,
+            documentation_text=documentation,
             commit_counts=counts,
             issue_texts=issues,
             known=known,
@@ -196,6 +216,11 @@ def main() -> int:
             + ", ".join(f"{key}={len(value)}" for key, value in sorted(per_source.items()))
             + f"  union={len(truth.paths)}"
         )
+        for source, share in truth.rejected.items():
+            print(
+                f"  ! {source.value} rejected: named {share:.1%} of the repository, "
+                "too broad to discriminate"
+            )
 
         results.append(
             {
@@ -208,6 +233,8 @@ def main() -> int:
                 "ground_truth": sorted(truth.paths),
                 "by_source": per_source,
                 "contributing_sources": [s.value for s in truth.contributing_sources()],
+                "rejected_sources": {s.value: round(share, 4) for s, share in truth.rejected.items()},
+                "prose_files_read": prose_files,
                 "issue_comments_read": args.comments,
             }
         )

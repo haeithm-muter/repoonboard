@@ -129,7 +129,7 @@ be recomputed rather than taken on trust.
 
 | Variant | Precision@6 (union) | Precision@6 (independent) |
 |---------|---------------------|---------------------------|
-| Full scoring | **0.375** | **0.250** |
+| Full scoring | **0.375** | **0.222** |
 | PageRank only | 0.250 | 0.167 |
 | Direct model ordering | not run | not run |
 
@@ -138,34 +138,46 @@ Per repository, full scoring: scrapy 3/6, poetry 3/6, kysely 2/6, hono 1/6.
 **Read these numbers with the following in mind. They are weaker than the
 table makes them look.**
 
-*The ground truth is thinner than the method promised.* Of the three sources,
-`CONTRIBUTING.md` contributed **nothing on all four repositories** — those
-files describe process (how to run tests, how to file an issue), not
-architecture; scrapy's is six lines pointing at a website. The `good first
-issue` label is absent entirely from hono, and yielded no file references for
-poetry. So for poetry and hono the ground truth is the ten most-committed
-files and nothing else.
+*The ground truth is thinner than the method promised.* The original design
+took files named in `CONTRIBUTING.md` as one of three sources. Measured, it
+contributed **nothing on all four repositories** — contributing guides
+describe process, not architecture; scrapy's is six lines pointing at a
+website. It was replaced by references found anywhere in a repository's prose,
+resolving both `path/to/file.ts` and Python's dotted `package.module` form.
+That reaches three of four repositories. Nothing reaches all four: hono keeps
+its documentation in a separate repository, and no candidate tried —
+`CODEOWNERS`, an `ARCHITECTURE.md`, the README alone — exists in even one of
+the four.
 
-*Which makes the union column partly circular.* Churn is an input to the
-scorer under test, at 0.15 of the weight. Scoring against a churn-derived
-ground truth partly measures the tool against its own input. The
-**independent** column exists for that reason: it scores only against ground
-truth from sources the scorer never sees, which is available for just two of
-the four repositories. It is the more honest number and it is lower.
+*One source had to be discarded for being too broad.* scrapy documents nearly
+every module it has, so extracting references yielded 50.8% of the repository.
+Each entry was correct and the set was still useless: six files picked at
+random would score about 0.49 against it. Any source naming more than a
+quarter of a repository is now recorded and excluded, because a ground truth
+that names half the code cannot tell a good selection from a lucky one.
+
+*The union column is partly circular.* Churn is an input to the scorer under
+test, at 0.15 of the weight, and after the above it is the only source that
+fires on every repository. The **independent** column scores only against
+sources the scorer never sees; it covers three of the four repositories and is
+the number to believe. It is lower.
+
+*Computed selection loses to the ablation on one repository.* On poetry's
+independent ground truth, full scoring gets 0/6 and PageRank alone gets 1/6.
+Full scoring wins on scrapy (3/6 against 2/6) and kysely (1/6 against 0/6) and
+wins on average, but the win is not uniform, and one of three is not a margin
+to lean on.
 
 *What can be said:* computed selection beats the PageRank-only ablation on
-both columns, and the gap comes from the two TypeScript repositories, where
-layer diversity and the folder cap keep the tour out of a single dense
-corner. That supports the narrow claim that the diversity machinery earns its
-place. It does not establish the broader claim that computed ordering beats a
-model's, because **that comparison has not been run** — it needs a live model
-call, and this project has never made one.
+both columns. That supports the narrow claim that layer diversity and the
+folder cap earn their place. It does not establish the broader claim that
+computed ordering beats a model's, because **that comparison has not been
+run** — it needs a live model call, and this project has never made one.
 
-*Sample size is four.* Tuning anything against these four repositories would
-be overfitting, and the one discovery fix made after seeing these results —
+*Sample size is four.* The one discovery fix made after seeing these results —
 excluding `example/`, `benchmark/`, `site/` and similar directories — was
-adopted because that code is not the project, not because it moved the
-number. It moved full scoring from 0.333 to 0.375.
+adopted because that code is not the project, not because it moved the number.
+It moved full scoring from 0.333 to 0.375.
 
 ## Scope
 

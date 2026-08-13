@@ -5,7 +5,7 @@
     "commit": "ca48915dd4f6c388be741a97213df03e7a81ea89",
     "language": "python",
     "source_files": 183,
-    "discovered_files": 476,
+    "discovered_files": 472,
     "ground_truth": [
       "scrapy/cmdline.py",
       "scrapy/commands/__init__.py",
@@ -52,7 +52,7 @@
       "scrapy/utils/serialize.py"
     ],
     "by_source": {
-      "contributing": [],
+      "documentation": [],
       "churn": [
         "scrapy/core/downloader/handlers/http11.py",
         "scrapy/core/engine.py",
@@ -112,6 +112,10 @@
       "churn",
       "good_first_issue"
     ],
+    "rejected_sources": {
+      "documentation": 0.5082
+    },
+    "prose_files_read": 86,
     "issue_comments_read": 0
   },
   {
@@ -120,21 +124,39 @@
     "commit": "92b74dcfe348d0e01e14d40d6c1fa47a4ee04a54",
     "language": "python",
     "source_files": 170,
-    "discovered_files": 405,
+    "discovered_files": 332,
     "ground_truth": [
       "src/poetry/config/config.py",
       "src/poetry/console/application.py",
+      "src/poetry/console/commands/env_command.py",
       "src/poetry/console/commands/init.py",
       "src/poetry/console/commands/show.py",
       "src/poetry/factory.py",
       "src/poetry/inspection/info.py",
       "src/poetry/installation/executor.py",
       "src/poetry/installation/installer.py",
+      "src/poetry/masonry/api.py",
+      "src/poetry/packages/__init__.py",
       "src/poetry/packages/locker.py",
-      "src/poetry/puzzle/provider.py"
+      "src/poetry/plugins/__init__.py",
+      "src/poetry/plugins/application_plugin.py",
+      "src/poetry/plugins/plugin.py",
+      "src/poetry/poetry.py",
+      "src/poetry/puzzle/provider.py",
+      "src/poetry/toml/__init__.py"
     ],
     "by_source": {
-      "contributing": [],
+      "documentation": [
+        "src/poetry/console/application.py",
+        "src/poetry/console/commands/env_command.py",
+        "src/poetry/masonry/api.py",
+        "src/poetry/packages/__init__.py",
+        "src/poetry/plugins/__init__.py",
+        "src/poetry/plugins/application_plugin.py",
+        "src/poetry/plugins/plugin.py",
+        "src/poetry/poetry.py",
+        "src/poetry/toml/__init__.py"
+      ],
       "churn": [
         "src/poetry/config/config.py",
         "src/poetry/console/application.py",
@@ -150,8 +172,11 @@
       "good_first_issue": []
     },
     "contributing_sources": [
+      "documentation",
       "churn"
     ],
+    "rejected_sources": {},
+    "prose_files_read": 57,
     "issue_comments_read": 0
   },
   {
@@ -159,8 +184,8 @@
     "slug": "kysely-org/kysely",
     "commit": "f24018c789c3cf7ad03ccc672ada63a1ded87f88",
     "language": "typescript",
-    "source_files": 408,
-    "discovered_files": 522,
+    "source_files": 310,
+    "discovered_files": 421,
     "ground_truth": [
       "src/dialect/mysql/mysql-dialect-config.ts",
       "src/index.ts",
@@ -178,7 +203,9 @@
       "src/schema/create-table-builder.ts"
     ],
     "by_source": {
-      "contributing": [],
+      "documentation": [
+        "src/index.ts"
+      ],
       "churn": [
         "src/index.ts",
         "src/kysely.ts",
@@ -199,9 +226,12 @@
       ]
     },
     "contributing_sources": [
+      "documentation",
       "churn",
       "good_first_issue"
     ],
+    "rejected_sources": {},
+    "prose_files_read": 75,
     "issue_comments_read": 0
   },
   {
@@ -209,8 +239,8 @@
     "slug": "honojs/hono",
     "commit": "41bdc4288ed7023c24d35f32bd065bd963435e3e",
     "language": "typescript",
-    "source_files": 219,
-    "discovered_files": 355,
+    "source_files": 199,
+    "discovered_files": 335,
     "ground_truth": [
       "src/adapter/aws-lambda/handler.ts",
       "src/client/types.ts",
@@ -224,7 +254,7 @@
       "src/validator/validator.ts"
     ],
     "by_source": {
-      "contributing": [],
+      "documentation": [],
       "churn": [
         "src/adapter/aws-lambda/handler.ts",
         "src/client/types.ts",
@@ -242,6 +272,8 @@
     "contributing_sources": [
       "churn"
     ],
+    "rejected_sources": {},
+    "prose_files_read": 15,
     "issue_comments_read": 0
   }
 ]

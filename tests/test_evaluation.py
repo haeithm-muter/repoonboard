@@ -1,8 +1,11 @@
 import pytest
 
 from repoonboard.evaluation import (
+    MAX_SOURCE_SHARE,
+    GroundTruth,
     Source,
     build_ground_truth,
+    extract_dotted,
     extract_paths,
     mean_precision,
     precision_at_k,
@@ -100,7 +103,7 @@ def test_top_committed_breaks_ties_deterministically():
 
 def test_the_union_combines_all_three_sources():
     truth = build_ground_truth(
-        contributing_text="read scrapy/core/engine.py",
+        documentation_text="read scrapy/core/engine.py",
         commit_counts={"scrapy/core/scheduler.py": 40},
         issue_texts=["the bug is in scrapy/utils/misc.py"],
         known=KNOWN,
@@ -114,24 +117,110 @@ def test_the_union_combines_all_three_sources():
 
 def test_a_repository_without_beginner_issues_reports_two_sources():
     truth = build_ground_truth(
-        contributing_text="read src/hono.ts",
+        documentation_text="read src/hono.ts",
         commit_counts={"src/router.ts": 12},
         issue_texts=[],
         known=KNOWN,
     )
-    assert set(truth.contributing_sources()) == {Source.CONTRIBUTING, Source.CHURN}
+    assert set(truth.contributing_sources()) == {Source.DOCUMENTATION, Source.CHURN}
     assert truth.by_source[Source.GOOD_FIRST_ISSUE] == set()
 
 
 def test_overlapping_sources_do_not_double_count():
     truth = build_ground_truth(
-        contributing_text="read src/router.ts",
+        documentation_text="read src/router.ts",
         commit_counts={"src/router.ts": 99},
         issue_texts=["src/router.ts again"],
         known=KNOWN,
     )
     assert truth.paths == {"src/router.ts"}
     assert len(truth.contributing_sources()) == 3
+
+
+# ---------------------------------------------------------------------------
+# Dotted module references — how Python documentation names files
+# ---------------------------------------------------------------------------
+
+
+def test_a_dotted_module_reference_resolves_to_a_file():
+    assert extract_dotted("see scrapy.core.engine for details", KNOWN) == {
+        "scrapy/core/engine.py"
+    }
+
+
+def test_a_dotted_package_resolves_to_its_init():
+    assert extract_dotted("scrapy.spiders defines the base class", KNOWN) == {
+        "scrapy/spiders/__init__.py"
+    }
+
+
+def test_a_dotted_name_that_resolves_to_nothing_is_ignored():
+    assert extract_dotted("os.path.join and json.loads", KNOWN) == set()
+
+
+def test_dotted_extraction_finds_nothing_in_empty_text():
+    assert extract_dotted("", KNOWN) == set()
+
+
+# ---------------------------------------------------------------------------
+# The selectivity guard
+# ---------------------------------------------------------------------------
+
+
+def test_a_source_naming_most_of_the_repository_is_rejected():
+    # Documentation that names nearly every module cannot discriminate: six
+    # random picks would score about as well as a considered selection.
+    everything = " ".join(KNOWN)
+    truth = build_ground_truth(
+        documentation_text=everything,
+        commit_counts={},
+        issue_texts=[],
+        known=KNOWN,
+    )
+    assert Source.DOCUMENTATION in truth.rejected
+    assert truth.by_source[Source.DOCUMENTATION] == set()
+    assert truth.paths == set()
+
+
+def test_the_rejected_share_is_recorded_for_reporting():
+    truth = build_ground_truth(
+        documentation_text=" ".join(KNOWN),
+        commit_counts={},
+        issue_texts=[],
+        known=KNOWN,
+    )
+    assert truth.rejected[Source.DOCUMENTATION] > MAX_SOURCE_SHARE
+
+
+def test_a_selective_source_survives_the_guard():
+    truth = build_ground_truth(
+        documentation_text="read scrapy/core/engine.py",
+        commit_counts={},
+        issue_texts=[],
+        known=KNOWN,
+    )
+    assert truth.rejected == {}
+    assert truth.by_source[Source.DOCUMENTATION] == {"scrapy/core/engine.py"}
+
+
+def test_the_guard_is_off_when_no_repository_size_is_given():
+    truth = GroundTruth()
+    truth.add(Source.DOCUMENTATION, set(KNOWN))
+    assert truth.rejected == {}
+    assert truth.paths == set(KNOWN)
+
+
+def test_churn_is_never_subject_to_the_guard():
+    # Churn is capped at ten files by construction, so the guard would only
+    # ever fire on a repository smaller than its own top-ten.
+    tiny = frozenset({"a.py", "b.py"})
+    truth = build_ground_truth(
+        documentation_text="",
+        commit_counts={"a.py": 5, "b.py": 4},
+        issue_texts=[],
+        known=tiny,
+    )
+    assert truth.by_source[Source.CHURN] == {"a.py", "b.py"}
 
 
 # ---------------------------------------------------------------------------

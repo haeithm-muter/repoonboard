@@ -6,9 +6,20 @@
 #
 # Ground truth for each repo is the union of three sources independent of
 # the author's judgement:
-#   1. files named in CONTRIBUTING.md
+#   1. files referenced anywhere in the repository's prose, as a path or as a
+#      Python dotted module name
 #   2. the ten most-committed files
 #   3. files referenced from "good first issue" threads
+#
+# Source 1 was originally "files named in CONTRIBUTING.md". That was measured
+# and yielded nothing on all four repositories: contributing guides describe
+# process, not architecture. CODEOWNERS and ARCHITECTURE.md were probed as
+# replacements and exist in none of the four. See eval/source_probe.json.
+#
+# A source naming more than 25% of a repository is recorded but excluded from
+# the union: scrapy's documentation references 50.8% of its own modules, which
+# is correct and useless, since six files chosen at random would score about
+# as well against it.
 #
 # ---------------------------------------------------------------------------
 # Every number below was measured, not estimated. `source_files` and

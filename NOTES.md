@@ -180,6 +180,62 @@ tuning against the measurement would be overfitting; the defect recorded under
 the same reason, and now has a harness to be judged against when someone does
 fix it.
 
+## Replacing the dead ground-truth source
+
+255 tests green. `CONTRIBUTING.md` is gone as a source; documentation
+references replace it. `eval/probe_sources.py` records what was measured.
+
+**Every candidate was probed before choosing, not assumed.** Yields, using the
+same extractor and `known` filter the harness scores with:
+
+| candidate | repositories yielding anything |
+|---|---|
+| README alone | 0 of 4 |
+| `CODEOWNERS` | 0 of 4 — the file exists in none of them |
+| `ARCHITECTURE.md` / `docs/architecture*` | 0 of 4 — exists in none of them |
+| `docs/` tree, paths | 1 of 4 |
+| all prose, paths | 2 of 4 |
+| all prose, dotted modules | 2 of 4 (both Python) |
+| **all prose, both forms** | **3 of 4** |
+
+`docs/` was the wrong place to look: kysely documents under `site/` and hono
+documents in a separate repository. Only the widest form reaches three, and
+nothing reaches four — hono's documentation is not in the repository at all,
+so no source located inside the pin can ever cover it.
+
+**One proposal was disqualified before testing.** "Files touched by more than
+half of merged pull requests" is churn under another name. It would have
+inflated the union while contributing nothing to the independent column, whose
+entire purpose is to exclude the scorer's own inputs.
+
+**Weakest assumption so far:** that a documentation reference indicates
+importance. scrapy falsifies it — its Sphinx tree names 50.8% of its modules,
+each reference correct and the set worthless, because six files drawn at
+random would score about 0.49 against it. Hence the selectivity guard at 25%.
+The threshold itself is a judgement call with one observation behind it: 50.8%
+is clearly too broad and 5.3% (poetry) is clearly fine, but nothing in the
+data says where between them the line belongs.
+
+**What will break on a real repository:** the guard is a share of repository
+size, so a large repository with proportionally thorough documentation passes
+where a small one with the same habit fails. And the dotted-module extractor
+is Python-only by construction — TypeScript has no equivalent convention — so
+the documentation source is systematically stronger for Python repositories.
+
+### The result got worse, and that is the finding
+
+The independent column moved from 0.250 to 0.222. Not a regression: coverage
+widened from two repositories to three, and poetry — which previously had no
+independent ground truth at all — entered with full scoring at 0/6.
+
+That exposes something the two-repository number was hiding: **full scoring
+loses to the PageRank ablation on poetry** (0/6 against 1/6). It wins on
+scrapy (3/6 against 2/6) and kysely (1/6 against 0/6), and wins on average,
+but the win is two of three, not three of three. The README says so.
+
+The union column is unchanged at 0.375 / 0.250, because the documentation
+source added paths that churn and beginner issues had largely already found.
+
 ## Findings carried into milestone 3
 
 Recorded during the milestone 2 review, deliberately not fixed yet.

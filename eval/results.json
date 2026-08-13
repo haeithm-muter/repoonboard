@@ -40,8 +40,8 @@
     },
     {
       "name": "poetry",
-      "ground_truth_size": 10,
-      "independent_size": 0,
+      "ground_truth_size": 18,
+      "independent_size": 9,
       "variants": {
         "Full scoring": {
           "hits": 3,
@@ -54,7 +54,9 @@
             "src/poetry/utils/helpers.py",
             "src/poetry/repositories/__init__.py",
             "src/poetry/puzzle/provider.py"
-          ]
+          ],
+          "independent_hits": 0,
+          "independent_precision": 0.0
         },
         "PageRank only": {
           "hits": 3,
@@ -67,14 +69,16 @@
             "src/poetry/puzzle/solver.py",
             "src/poetry/installation/executor.py",
             "src/poetry/console/commands/debug/resolve.py"
-          ]
+          ],
+          "independent_hits": 1,
+          "independent_precision": 0.1667
         }
       }
     },
     {
       "name": "kysely",
       "ground_truth_size": 14,
-      "independent_size": 4,
+      "independent_size": 5,
       "variants": {
         "Full scoring": {
           "hits": 2,
@@ -88,8 +92,8 @@
             "src/schema/alter-table-builder.ts",
             "src/util/type-error.ts"
           ],
-          "independent_hits": 0,
-          "independent_precision": 0.0
+          "independent_hits": 1,
+          "independent_precision": 0.1667
         },
         "PageRank only": {
           "hits": 0,
@@ -147,10 +151,10 @@
     "PageRank only": 0.25
   },
   "mean_precision_independent": {
-    "Full scoring": 0.25,
+    "Full scoring": 0.2222,
     "PageRank only": 0.1667
   },
-  "independent_repository_count": 2,
+  "independent_repository_count": 3,
   "not_run": {
     "Direct model ordering": "requires a live model call; no verified live path exists"
   }

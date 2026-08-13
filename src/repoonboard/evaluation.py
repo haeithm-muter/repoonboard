@@ -27,9 +27,19 @@ from enum import StrEnum
 
 
 class Source(StrEnum):
-    CONTRIBUTING = "contributing"
+    DOCUMENTATION = "documentation"
     CHURN = "churn"
     GOOD_FIRST_ISSUE = "good_first_issue"
+
+
+# A source naming more than this share of a repository has no discriminating
+# power, however correct each individual entry is. Measured case: scrapy
+# documents nearly every module in its Sphinx tree, so extracting module
+# references yields 48.6% of the repository — against which picking six files
+# at random scores about 0.49. Such a source is recorded and reported, but
+# kept out of the union, because a ground truth that names half the code
+# cannot tell a good selection from a lucky one.
+MAX_SOURCE_SHARE = 0.25
 
 
 # A path-like token: at least one directory separator, ending in a source
@@ -45,10 +55,21 @@ class GroundTruth:
 
     paths: set[str] = field(default_factory=set)
     by_source: dict[Source, set[str]] = field(default_factory=dict)
+    rejected: dict[Source, float] = field(default_factory=dict)
 
-    def add(self, source: Source, found: set[str]) -> None:
-        self.by_source[source] = set(found)
-        self.paths |= set(found)
+    def add(self, source: Source, found: set[str], repository_size: int = 0) -> None:
+        """Record a source's contribution, unless it is too broad to mean anything.
+
+        `repository_size` of 0 disables the selectivity guard, which is what
+        callers scoring a fixed hand-written truth want.
+        """
+        found = set(found)
+        if repository_size and len(found) / repository_size > MAX_SOURCE_SHARE:
+            self.rejected[source] = len(found) / repository_size
+            self.by_source[source] = set()
+            return
+        self.by_source[source] = found
+        self.paths |= found
 
     def contributing_sources(self) -> list[Source]:
         """Sources that actually yielded at least one path.
@@ -94,19 +115,56 @@ def top_committed(commit_counts: dict[str, int], known: frozenset[str], limit: i
     return {path for path, _ in eligible[:limit]}
 
 
+_DOTTED = re.compile(r"\b([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*){1,6})\b")
+
+
+def extract_dotted(text: str, known: frozenset[str]) -> set[str]:
+    """Resolve dotted module references — `scrapy.core.engine` — to files.
+
+    Python documentation names modules, not paths, so the slash-requiring path
+    extractor cannot see them at all. Only references that resolve to a real
+    file at the pin are kept, and the caller is expected to apply the
+    selectivity guard: a project that documents every module exhaustively
+    produces a reference set too broad to score against.
+    """
+    found: set[str] = set()
+    for match in _DOTTED.findall(text or ""):
+        parts = match.split(".")
+        for start in range(len(parts) - 1):
+            stem = "/".join(parts[start:])
+            for candidate in (f"{stem}.py", f"{stem}/__init__.py", f"src/{stem}.py",
+                              f"src/{stem}/__init__.py"):
+                if candidate in known:
+                    found.add(candidate)
+                    break
+    return found
+
+
 def build_ground_truth(
-    contributing_text: str,
+    documentation_text: str,
     commit_counts: dict[str, int],
     issue_texts: list[str],
     known: frozenset[str],
     churn_limit: int = 10,
 ) -> GroundTruth:
+    """Assemble the union from the three sources.
+
+    `documentation_text` replaces the CONTRIBUTING.md source of the original
+    design, which was measured to yield nothing on any of the four evaluation
+    repositories: contributing guides describe process, not architecture.
+    """
     truth = GroundTruth()
-    truth.add(Source.CONTRIBUTING, extract_paths(contributing_text, known))
+    size = len(known)
+
+    documented = extract_paths(documentation_text, known)
+    documented |= extract_dotted(documentation_text, known)
+    truth.add(Source.DOCUMENTATION, documented, repository_size=size)
+
     truth.add(Source.CHURN, top_committed(commit_counts, known, churn_limit))
     truth.add(
         Source.GOOD_FIRST_ISSUE,
         extract_paths("\n".join(issue_texts), known),
+        repository_size=size,
     )
     return truth
 
