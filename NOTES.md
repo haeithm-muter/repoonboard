@@ -224,17 +224,39 @@ the documentation source is systematically stronger for Python repositories.
 
 ### The result got worse, and that is the finding
 
-The independent column moved from 0.250 to 0.222. Not a regression: coverage
-widened from two repositories to three, and poetry — which previously had no
-independent ground truth at all — entered with full scoring at 0/6.
+**The independent score dropped from 0.250 to 0.222 when the new source was
+added.** Write it that way round and do not soften it. The tool did not
+improve and then get measured differently; the measurement got wider and the
+tool did worse under it. Coverage went from two repositories to three, poetry
+entered with full scoring at 0/6, and the average fell. The earlier 0.250 was
+the more flattering number because it rested on less evidence.
 
-That exposes something the two-repository number was hiding: **full scoring
-loses to the PageRank ablation on poetry** (0/6 against 1/6). It wins on
-scrapy (3/6 against 2/6) and kysely (1/6 against 0/6), and wins on average,
-but the win is two of three, not three of three. The README says so.
+**Full scoring loses to the PageRank-only ablation on poetry**: 0/6 against
+1/6 on independent ground truth. It wins on scrapy (3/6 against 2/6) and on
+kysely (1/6 against 0/6), so it wins on average — two of three, not three of
+three. The thesis of this project is that computed selection beats the
+alternatives; on one of the three repositories that can be measured
+independently, the crudest alternative beat it.
+
+Both facts are stated at the top of the README results section, above the
+commentary, because the natural place for them is exactly where a reader
+skimming for a headline number will not look.
 
 The union column is unchanged at 0.375 / 0.250, because the documentation
 source added paths that churn and beginner issues had largely already found.
+
+### Direct model ordering was never measured
+
+No Anthropic API key was available in the environment this was built in —
+`ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` are unset, the `ant` CLI is not
+installed, and there is no credential profile on disk. So `AnthropicGenerator`
+has never executed against a live API, and the `Direct model ordering` row
+reads "not tested" rather than carrying a number.
+
+This is the one claim in the README that remains entirely unevidenced: the
+project is built on the premise that computed ordering beats asking a model,
+and that comparison has not been run. Anyone with a key can run it; nothing
+else is missing.
 
 ## Findings carried into milestone 3
 

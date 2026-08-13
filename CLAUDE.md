@@ -68,12 +68,19 @@ attention. 226 tests green. Classification lives in `staleness.py` as pure
 functions over data gathered by `git_signals.py`, so every number the CLI
 prints is derived from the run rather than asserted beside it.
 
-All five milestones are done. Before adding features, read the defect recorded
-under "Milestone 5" in NOTES.md: selection picks empty `__init__.py` files that
-cannot become stations, so tours can come out below the documented minimum of
-five. It needs an evaluation harness before it can be fixed responsibly —
-`eval/repos.toml` is still empty placeholders, and the README's results table
-still says "pending".
+All five milestones are done, the evaluation harness runs, and the package is
+prepared for PyPI (see RELEASING.md). 259 tests green.
+
+Measured results are in the README. Two of them are unflattering and must stay
+visible: the independent score fell from 0.250 to 0.222 when a third
+ground-truth source widened coverage, and full scoring loses to the PageRank
+ablation on poetry. `Direct model ordering` is untested — no API key was ever
+available — so the project's central comparison ships unmeasured.
+
+Before adding features, read the defect recorded under "Milestone 5" in
+NOTES.md: selection picks empty `__init__.py` files that cannot become
+stations, so tours can come out below the documented minimum of five. There is
+now a harness to judge a fix against.
 
 Known gaps deliberately left open during milestone 2 are listed in NOTES.md;
 read them before extending the scoring model, and do not silently rely on

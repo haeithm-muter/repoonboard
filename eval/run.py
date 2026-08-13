@@ -154,7 +154,8 @@ def main() -> int:
             print(f"{variant:24} {mean:8.3f} {independent_mean:13.3f}")
         else:
             print(f"{variant:24} {mean:8.3f} {'n/a':>13}")
-    print(f"{MODEL:24} {'not run':>8} {'not run':>13}")
+    print(f"{MODEL:24} {'untested':>8} {'untested':>13}")
+    print("  (no Anthropic API key available; the baseline has never been measured)")
 
     print(
         f"\nunion       = mean precision@{args.k} over all {len(entries)} repositories\n"
@@ -170,8 +171,11 @@ def main() -> int:
                 "mean_precision_union": summary,
                 "mean_precision_independent": independent_summary,
                 "independent_repository_count": scored_independently,
-                "not_run": {
-                    MODEL: "requires a live model call; no verified live path exists"
+                "untested": {
+                    MODEL: (
+                        "requires a live model call; no Anthropic API key was "
+                        "available, so this baseline has never been measured"
+                    )
                 },
             },
             indent=2,

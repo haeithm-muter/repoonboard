@@ -1,11 +1,32 @@
 [project]
 name = "repoonboard"
-version = "0.1.0"
-description = "Generates CodeTour learning paths for a repository, ordered by its real dependency graph rather than by a language model's opinion."
+# Single source of truth: src/repoonboard/__init__.py. Keeping the number in
+# two places invites shipping a package that misreports its own version.
+dynamic = ["version"]
+description ="Generates CodeTour learning paths for a repository, ordered by its real dependency graph rather than by a language model's opinion."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["codetour", "onboarding", "static-analysis", "dependency-graph", "tree-sitter"]
+authors = [{ name = "haeithm-muter" }]
+
+# Alpha, deliberately. Five milestones are complete and 255 tests pass, but the
+# project's central claim -- that computed ordering beats a model's opinion --
+# has never been measured, and station selection has a known defect recorded in
+# NOTES.md. "Beta" would overstate what has been verified.
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Software Development :: Quality Assurance",
+]
 
 dependencies = [
     "typer>=0.12",
@@ -25,6 +46,11 @@ dependencies = [
     "tomli-w>=1.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/haeithm-muter/repoonboard"
+Repository = "https://github.com/haeithm-muter/repoonboard"
+Issues = "https://github.com/haeithm-muter/repoonboard/issues"
+
 [project.optional-dependencies]
 llm = ["anthropic>=0.34"]
 dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.5"]
@@ -36,8 +62,26 @@ repoonboard = "repoonboard.cli:app"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.version]
+path = "src/repoonboard/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/repoonboard"]
+
+[tool.hatch.build.targets.sdist]
+# Tests and the evaluation harness ship deliberately: a downstream packager
+# should be able to run the suite, and the numbers in the README should be
+# reproducible from the source distribution alone.
+#
+# These do not ship. CLAUDE.md describes itself as local configuration rather
+# than published content, and .claude/ holds local tool settings; putting
+# either inside a package uploaded to PyPI would contradict that.
+exclude = [
+    ".claude",
+    "CLAUDE.md",
+    ".eval-cache",
+    "dist",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -11,6 +11,11 @@ pip install repoonboard
 repoonboard analyze ./some-repo
 ```
 
+> Not yet on PyPI. The package builds, passes `twine check`, and has been
+> installed from its own wheel into a clean environment and exercised — but it
+> has never been uploaded. See [RELEASING.md](RELEASING.md). Until then:
+> `pip install git+https://github.com/haeithm-muter/repoonboard`.
+
 ---
 
 ## The problem
@@ -131,9 +136,28 @@ be recomputed rather than taken on trust.
 |---------|---------------------|---------------------------|
 | Full scoring | **0.375** | **0.222** |
 | PageRank only | 0.250 | 0.167 |
-| Direct model ordering | not run | not run |
+| Direct model ordering | not tested | not tested |
 
 Per repository, full scoring: scrapy 3/6, poetry 3/6, kysely 2/6, hono 1/6.
+
+> **Two results that reflect badly on this tool, stated before anything else.**
+>
+> **The independent score went down, from 0.250 to 0.222.** Adding a third
+> ground-truth source did not improve the tool; it widened coverage from two
+> repositories to three, and the repository that joined scored badly. The
+> earlier, higher number was measured against less evidence.
+>
+> **Full scoring loses to the PageRank-only ablation on poetry:** 0/6 against
+> 1/6 on independent ground truth. It wins on scrapy (3/6 against 2/6) and
+> kysely (1/6 against 0/6), so it wins on average — two of three, not three of
+> three. The central claim of this project is that computed selection beats
+> the alternatives. On one of three measurable repositories, the simplest
+> alternative beat it.
+>
+> **`Direct model ordering` is untested.** It needs a live model call, and no
+> Anthropic API key was available in the environment this was built in — so
+> the row says "not tested" rather than carrying a number. The baseline the
+> README claims to improve on has never been measured.
 
 **Read these numbers with the following in mind. They are weaker than the
 table makes them look.**
@@ -162,17 +186,12 @@ fires on every repository. The **independent** column scores only against
 sources the scorer never sees; it covers three of the four repositories and is
 the number to believe. It is lower.
 
-*Computed selection loses to the ablation on one repository.* On poetry's
-independent ground truth, full scoring gets 0/6 and PageRank alone gets 1/6.
-Full scoring wins on scrapy (3/6 against 2/6) and kysely (1/6 against 0/6) and
-wins on average, but the win is not uniform, and one of three is not a margin
-to lean on.
-
 *What can be said:* computed selection beats the PageRank-only ablation on
-both columns. That supports the narrow claim that layer diversity and the
+both columns, on two of the three repositories that can be measured
+independently. That supports the narrow claim that layer diversity and the
 folder cap earn their place. It does not establish the broader claim that
-computed ordering beats a model's, because **that comparison has not been
-run** — it needs a live model call, and this project has never made one.
+computed ordering beats a model's opinion, because that comparison has never
+been run.
 
 *Sample size is four.* The one discovery fix made after seeing these results —
 excluding `example/`, `benchmark/`, `site/` and similar directories — was

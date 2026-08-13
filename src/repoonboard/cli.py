@@ -50,6 +50,17 @@ app = typer.Typer(
 console = Console()
 
 
+def _display_name(path: Path) -> str:
+    """A name to show for a repository path.
+
+    `Path(".").name` is the empty string, so `repoonboard plan .` — the way
+    almost everyone will first run this — produced a table titled " — learning
+    path" with no repository in it.
+    """
+    resolved = path.resolve()
+    return resolved.name or str(resolved)
+
+
 def _load(root: Path, subdir: str | None):
     if not root.exists():
         console.print(f"[red]Path does not exist:[/red] {root}")
@@ -90,7 +101,7 @@ def analyze(
     sources = [item for item in files if not item.is_test]
     tests = [item for item in files if item.is_test]
 
-    table = Table(title=f"{path.name} @ {pinned}", header_style="bold")
+    table = Table(title=f"{_display_name(path)} @ {pinned}", header_style="bold")
     table.add_column("#", justify="right", style="dim")
     table.add_column("File")
     table.add_column("Lang")
@@ -143,7 +154,7 @@ def plan(
     result = order_stations(repo_graph, stations)
     by_path = {s.path: s for s in stations}
 
-    table = Table(title=f"{path.name} — learning path", header_style="bold")
+    table = Table(title=f"{_display_name(path)} — learning path", header_style="bold")
     table.add_column("#", justify="right", style="dim")
     table.add_column("File")
     table.add_column("Layer")
@@ -249,7 +260,7 @@ def generate(
 
     selected = {station.path for station in tour_stations}
     tour = Tour(
-        repository=Path(path).resolve().name,
+        repository=_display_name(Path(path)),
         commit=pinned,
         stations=tuple(tour_stations),
         edges=tuple(
@@ -267,7 +278,7 @@ def generate(
 
 
 def _report(path: Path, results: list, skipped: list[tuple[str, str]]) -> None:
-    table = Table(title=f"{path.resolve().name} — generated stations", header_style="bold")
+    table = Table(title=f"{_display_name(path)} — generated stations", header_style="bold")
     table.add_column("#", justify="right", style="dim")
     table.add_column("File")
     table.add_column("Source")

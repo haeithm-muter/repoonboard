@@ -1,0 +1,80 @@
+name: Publish
+
+# Publishing is triggered by creating a GitHub Release, never by a push. A
+# version can only be uploaded to PyPI once, so the trigger is deliberately a
+# manual, deliberate act rather than anything that fires on merge.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to upload"
+        required: true
+        default: testpypi
+        type: choice
+        options: [testpypi, pypi]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Configure git for the end-to-end tests
+        run: |
+          git config --global user.email "ci@example.com"
+          git config --global user.name "CI"
+          git config --global init.defaultBranch main
+
+      # Publishing an artefact whose tests were never run is how a broken
+      # release reaches users. The suite runs here, against this exact tree.
+      - name: Install and test
+        run: |
+          python -m pip install --upgrade pip build
+          pip install -e ".[dev]"
+          ruff check .
+          pytest -q
+
+      - name: Build
+        run: python -m build
+
+      - name: Check metadata
+        run: |
+          pip install twine
+          twine check dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # Trusted Publishing: PyPI verifies this workflow's OIDC identity, so no
+    # API token is stored in the repository at all. Configure the publisher at
+    # https://pypi.org/manage/account/publishing/ before the first release.
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/p/repoonboard
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish to PyPI
+        if: github.event_name == 'release' || inputs.target == 'pypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
