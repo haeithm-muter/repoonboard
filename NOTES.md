@@ -122,6 +122,64 @@ carry a station, so tours can still come out undersized. The fix belongs in
 re-evaluated against `eval/repos.toml`, which is still empty. Left open
 deliberately rather than patched blind.
 
+## Evaluation harness (done)
+
+246 tests green. `eval/fetch.py` builds the ground truth, `eval/run.py` scores
+it, and both outputs are committed so the README's numbers can be recomputed.
+
+**Weakest assumption so far:** that the three-source ground truth from the
+original card describes what a newcomer should read. Measured, it does not.
+
+- `CONTRIBUTING.md` yielded **zero** paths on all four repositories. These are
+  process documents — how to run tests, how to file an issue, how to sign a
+  CLA. scrapy's is six lines pointing at a website. The source is not weak
+  here, it is structurally wrong: contributing guides do not name architecture.
+- `good first issue` is absent from hono entirely and produced no file
+  references for poetry. It worked for scrapy (40 paths) and barely for
+  kysely (4).
+- That leaves churn as the only source that fires everywhere — and churn is an
+  input to the scorer under test, at 0.15 of the weight. For poetry and hono
+  the ground truth is churn alone, so scoring against it is partly circular.
+
+The `independent` column in the results reports precision against only the
+non-churn part of the ground truth, which exists for two of four repositories.
+It is lower than the union column (0.250 against 0.375) and it is the number
+to believe.
+
+**What will break on a real repository:** the harness assumes a path mentioned
+in prose is a reference worth counting. It requires a directory separator and
+a source extension precisely to avoid counting the word "engine.py" in a
+sentence, but that same strictness silently drops real references written as
+module paths (`scrapy.core.engine`) or as directories. Nothing measures what
+it misses.
+
+### What the numbers do and do not support
+
+Full scoring beats the PageRank-only ablation on both columns, entirely on the
+strength of the two TypeScript repositories. That supports the narrow claim
+that layer diversity and the folder cap earn their keep. It does **not**
+support the headline claim that computed ordering beats a model's opinion:
+that comparison needs a live model call and has never been run. The results
+table says "not run" rather than leaving the row blank, because a blank row
+invites the reader to assume it was simply not interesting.
+
+### Defect fixed by measurement
+
+`discovery.py` did not exclude `example/`, `examples/`, `benchmark/`,
+`benchmarks/`, `demo/`, `sample/`, `fixtures/`, `site/` or `website/`. On
+kysely the PageRank ablation returned six `example/` and `site/` files; on
+hono it returned benchmark harnesses. Example and benchmark code is small,
+densely interlinked and self-contained, which is exactly the shape that scores
+well on an import graph — and exactly what a newcomer should not be sent to.
+Excluding it moved full scoring from 0.333 to 0.375.
+
+The exclusion was adopted because that code is not the project, not because it
+improved the number. With four repositories and a ground truth this thin,
+tuning against the measurement would be overfitting; the defect recorded under
+"Milestone 5" — selection picking empty `__init__.py` files — is still open for
+the same reason, and now has a harness to be judged against when someone does
+fix it.
+
 ## Findings carried into milestone 3
 
 Recorded during the milestone 2 review, deliberately not fixed yet.

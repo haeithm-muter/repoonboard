@@ -27,3 +27,9 @@ coverage.xml
 
 # Generated tours and the local generation cache
 .repoonboard/
+
+# Full clones of the evaluation repositories. eval/ground_truth.json and
+# eval/results.json ARE committed: they are the evidence behind the numbers in
+# the README, and a published number whose derivation is not in the repository
+# is just an assertion.
+.eval-cache/

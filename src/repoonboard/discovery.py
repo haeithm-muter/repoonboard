@@ -35,6 +35,24 @@ EXCLUDED_DIRS: frozenset[str] = frozenset(
         "vendor",
         "third_party",
         "migrations",
+        # Code that ships beside the project but is not the project. A
+        # newcomer asking "where do I start reading" is never answered by an
+        # example app or a benchmark harness, and both are usually small,
+        # densely interlinked and self-contained -- which is exactly the shape
+        # that scores well on an import graph. Measured on the evaluation
+        # repositories: before this, PageRank alone returned six example/ and
+        # site/ files for kysely and two benchmark files for hono.
+        "example",
+        "examples",
+        "benchmark",
+        "benchmarks",
+        "demo",
+        "demos",
+        "sample",
+        "samples",
+        "fixtures",
+        "site",
+        "website",
         "site-packages",
         ".tox",
         ".idea",

@@ -122,20 +122,50 @@ pretend otherwise.
 
 ## Results
 
-Measured on four pinned open-source repositories (two Python, two
-TypeScript), against ground truth built from three independent sources:
-files named in `CONTRIBUTING.md`, the ten most-committed files, and files
-referenced from `good first issue` threads.
+Measured on four pinned repositories — scrapy, poetry (Python), kysely, hono
+(TypeScript) — with `eval/fetch.py` and `eval/run.py`. The pins, the ground
+truth and the raw results are committed in `eval/`, so every number below can
+be recomputed rather than taken on trust.
 
-<!-- Numbers go here once the evaluation harness runs. Report what it
-     measures, including the case where computed ordering loses to the
-     model's. An honest number is worth more than a flattering one. -->
+| Variant | Precision@6 (union) | Precision@6 (independent) |
+|---------|---------------------|---------------------------|
+| Full scoring | **0.375** | **0.250** |
+| PageRank only | 0.250 | 0.167 |
+| Direct model ordering | not run | not run |
 
-| Variant | Precision@6 |
-|---------|-------------|
-| Full scoring | _pending_ |
-| PageRank only | _pending_ |
-| Direct model ordering | _pending_ |
+Per repository, full scoring: scrapy 3/6, poetry 3/6, kysely 2/6, hono 1/6.
+
+**Read these numbers with the following in mind. They are weaker than the
+table makes them look.**
+
+*The ground truth is thinner than the method promised.* Of the three sources,
+`CONTRIBUTING.md` contributed **nothing on all four repositories** — those
+files describe process (how to run tests, how to file an issue), not
+architecture; scrapy's is six lines pointing at a website. The `good first
+issue` label is absent entirely from hono, and yielded no file references for
+poetry. So for poetry and hono the ground truth is the ten most-committed
+files and nothing else.
+
+*Which makes the union column partly circular.* Churn is an input to the
+scorer under test, at 0.15 of the weight. Scoring against a churn-derived
+ground truth partly measures the tool against its own input. The
+**independent** column exists for that reason: it scores only against ground
+truth from sources the scorer never sees, which is available for just two of
+the four repositories. It is the more honest number and it is lower.
+
+*What can be said:* computed selection beats the PageRank-only ablation on
+both columns, and the gap comes from the two TypeScript repositories, where
+layer diversity and the folder cap keep the tour out of a single dense
+corner. That supports the narrow claim that the diversity machinery earns its
+place. It does not establish the broader claim that computed ordering beats a
+model's, because **that comparison has not been run** — it needs a live model
+call, and this project has never made one.
+
+*Sample size is four.* Tuning anything against these four repositories would
+be overfitting, and the one discovery fix made after seeing these results —
+excluding `example/`, `benchmark/`, `site/` and similar directories — was
+adopted because that code is not the project, not because it moved the
+number. It moved full scoring from 0.333 to 0.375.
 
 ## Scope
 

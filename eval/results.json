@@ -1,0 +1,157 @@
+{
+  "k": 6,
+  "repositories": [
+    {
+      "name": "scrapy",
+      "ground_truth_size": 43,
+      "independent_size": 40,
+      "variants": {
+        "Full scoring": {
+          "hits": 3,
+          "considered": 6,
+          "precision": 0.5,
+          "predicted": [
+            "scrapy/commands/parse.py",
+            "scrapy/http/__init__.py",
+            "scrapy/http/request/__init__.py",
+            "scrapy/spiders/__init__.py",
+            "scrapy/crawler.py",
+            "scrapy/utils/misc.py"
+          ],
+          "independent_hits": 3,
+          "independent_precision": 0.5
+        },
+        "PageRank only": {
+          "hits": 3,
+          "considered": 6,
+          "precision": 0.5,
+          "predicted": [
+            "scrapy/http/__init__.py",
+            "scrapy/crawler.py",
+            "scrapy/spiders/__init__.py",
+            "scrapy/core/engine.py",
+            "scrapy/core/downloader/handlers/http2.py",
+            "scrapy/pipelines/files.py"
+          ],
+          "independent_hits": 2,
+          "independent_precision": 0.3333
+        }
+      }
+    },
+    {
+      "name": "poetry",
+      "ground_truth_size": 10,
+      "independent_size": 0,
+      "variants": {
+        "Full scoring": {
+          "hits": 3,
+          "considered": 6,
+          "precision": 0.5,
+          "predicted": [
+            "src/poetry/console/commands/debug/resolve.py",
+            "src/poetry/factory.py",
+            "src/poetry/config/config.py",
+            "src/poetry/utils/helpers.py",
+            "src/poetry/repositories/__init__.py",
+            "src/poetry/puzzle/provider.py"
+          ]
+        },
+        "PageRank only": {
+          "hits": 3,
+          "considered": 6,
+          "precision": 0.5,
+          "predicted": [
+            "src/poetry/console/application.py",
+            "src/poetry/factory.py",
+            "src/poetry/mixology/version_solver.py",
+            "src/poetry/puzzle/solver.py",
+            "src/poetry/installation/executor.py",
+            "src/poetry/console/commands/debug/resolve.py"
+          ]
+        }
+      }
+    },
+    {
+      "name": "kysely",
+      "ground_truth_size": 14,
+      "independent_size": 4,
+      "variants": {
+        "Full scoring": {
+          "hits": 2,
+          "considered": 6,
+          "precision": 0.3333,
+          "predicted": [
+            "src/index.ts",
+            "src/readonly/index.ts",
+            "src/migration/index.ts",
+            "src/query-compiler/default-query-compiler.ts",
+            "src/schema/alter-table-builder.ts",
+            "src/util/type-error.ts"
+          ],
+          "independent_hits": 0,
+          "independent_precision": 0.0
+        },
+        "PageRank only": {
+          "hits": 0,
+          "considered": 6,
+          "precision": 0.0,
+          "predicted": [
+            "playground.ts",
+            ".mocharc.cjs",
+            "scripts/add-deno-type-references.cjs",
+            "scripts/check-esm-imports.cjs",
+            "scripts/check-exports.cjs",
+            "scripts/copy-interface-documentation.cjs"
+          ],
+          "independent_hits": 0,
+          "independent_precision": 0.0
+        }
+      }
+    },
+    {
+      "name": "hono",
+      "ground_truth_size": 10,
+      "independent_size": 0,
+      "variants": {
+        "Full scoring": {
+          "hits": 1,
+          "considered": 6,
+          "precision": 0.1667,
+          "predicted": [
+            "src/index.ts",
+            "src/hono.ts",
+            "src/utils/html.ts",
+            "src/jsx/hooks/index.ts",
+            "src/helper/html/index.ts",
+            "src/jsx/index.ts"
+          ]
+        },
+        "PageRank only": {
+          "hits": 0,
+          "considered": 6,
+          "precision": 0.0,
+          "predicted": [
+            "src/helper/streaming/index.ts",
+            "src/jsx/dom/index.ts",
+            "src/adapter/bun/index.ts",
+            "src/adapter/deno/index.ts",
+            "runtime-tests/workerd/index.ts",
+            "src/jsx/base.ts"
+          ]
+        }
+      }
+    }
+  ],
+  "mean_precision_union": {
+    "Full scoring": 0.375,
+    "PageRank only": 0.25
+  },
+  "mean_precision_independent": {
+    "Full scoring": 0.25,
+    "PageRank only": 0.1667
+  },
+  "independent_repository_count": 2,
+  "not_run": {
+    "Direct model ordering": "requires a live model call; no verified live path exists"
+  }
+}
