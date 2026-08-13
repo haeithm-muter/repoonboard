@@ -31,7 +31,12 @@ _JS_SUFFIXES: tuple[str, ...] = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs")
 _JS_INDEX_NAMES: tuple[str, ...] = tuple(f"index{suffix}" for suffix in _JS_SUFFIXES)
 
 
-def _parser_for(language: str) -> Parser:
+def parser_for(language: str) -> Parser:
+    """Return a cached tree-sitter parser for a supported language.
+
+    Public because snippet extraction parses the same files for a different
+    purpose and must not build a second set of parsers.
+    """
     if language not in _PARSERS:
         if language == "python":
             _PARSERS[language] = Parser(Language(tspython.language()))
@@ -56,7 +61,7 @@ class RawImport:
 
 def extract(source_bytes: bytes, language: str) -> list[RawImport]:
     """Pull every import specifier out of a file. No resolution here."""
-    parser = _parser_for(language)
+    parser = parser_for(language)
     tree = parser.parse(source_bytes)
 
     if language == "python":

@@ -51,9 +51,14 @@ Four decisions hold the whole design up:
 | Command | What it does | Status |
 |---------|--------------|--------|
 | `analyze` | Inventory the repository: files kept, files filtered, churn per file | ✅ working |
-| `plan` | Select and order stations — no model call at all | 🚧 milestone 2 |
-| `generate` | Write grounded explanations and questions, export the tour | 🚧 milestones 3–4 |
+| `plan` | Select and order stations — no model call at all | ✅ working |
+| `generate` | Write grounded explanations and verification questions | ✅ working |
+| `generate` | Export `.tour`, `ONBOARDING.md`, `architecture.mmd` | 🚧 milestone 4 |
 | `check` | Report which stations went stale since the tour was pinned | 🚧 milestone 5 |
+
+`generate --dry-run` runs the entire pipeline with no model and no network,
+producing structural explanations only. It is the fastest way to see what the
+tour's shape looks like on your repository before spending a single token.
 
 ## How importance is computed
 
@@ -85,10 +90,17 @@ from the visible snippet, naming domain terms.
 visible in the snippet, mentioning files or symbols absent from its context.
 
 Every generation passes a grounding gate: each path must exist, each symbol
-must appear in the snippet, each question must carry a valid answer location.
-A failure gets one retry with tighter instructions, then falls back to a
-structural explanation with no model involved. Unverified content is never
-emitted.
+must appear in the snippet, each question must carry a valid answer location
+that lies inside the lines the model was shown and is not an import line.
+A failure gets one retry with the rejections quoted back, then falls back to a
+structural explanation with no model involved — and that fallback passes the
+same gate. Every station records which of the three it came from.
+
+**What the gate does not do:** it checks structure, not truth. Prose that
+cites only real symbols and points at real lines can still be wrong about what
+the code *does*, and it will pass. The gate bounds hallucination to the
+vocabulary of the file; it is not a fact checker, and this README will not
+pretend otherwise.
 
 ## Results
 

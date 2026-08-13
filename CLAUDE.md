@@ -39,5 +39,23 @@ analysis, private repos and auth, any language other than Python and TS/JS.
 - Do not advance while any test is red.
 
 ## Current state
-Milestone 1 partially done: discovery, filtering, churn, CLI shell, 28 tests
-green. Next: tree-sitter import extraction and path resolution.
+Milestones 1, 2 and 3 done: discovery, filtering, churn, import extraction and
+resolution, dependency graph, scoring, layer classification, station selection
+and ordering, snippet extraction, grounded explanation and verification
+questions behind the grounding gate. 144 tests green. `analyze`, `plan` and
+`generate` all run end to end on real repositories.
+
+The generation ladder is: model, then one retry with the gate's rejections
+quoted back, then a structural explanation built with no model at all. The
+structural output passes the same gate as everything else, and a test enforces
+that. Every station records its provenance, and the CLI prints it.
+
+Note the gate's real limit before extending it: it verifies paths, symbols,
+question count and answer locations — all structural. It does not verify that
+a sentence is true. See NOTES.md.
+
+Next: milestone 4 — export to `.tour`, `ONBOARDING.md` and `architecture.mmd`.
+Known gaps deliberately left open during milestone 2 are listed in NOTES.md;
+read them before extending the scoring model, and do not silently rely on
+`doc_signal`. `ruff check` is not clean on the milestone 1-2 modules by
+design; it is clean on everything added in milestone 3.

@@ -14,9 +14,15 @@ from rich.table import Table
 
 from . import __version__
 from .discovery import MAX_FILES, discover, dominant_languages
+from .explanation import Provenance
+from .generation import UnverifiableStation, generate_station
 from .git_signals import churn, head_commit, is_git_repository
 from .graph import build
+from .model import DEFAULT_MODEL, AnthropicGenerator, CachingGenerator
+from .snippets import build_for_file
 from .stations import order_stations, select_stations
+
+OUTPUT_DIR = ".repoonboard"
 
 app = typer.Typer(
     name="repoonboard",
@@ -148,10 +154,133 @@ def plan(
 
 
 @app.command()
-def generate(path: Path = typer.Argument(..., help="Path to a local repository.")) -> None:
-    """Write explanations and verification questions, then export the tour."""
-    console.print("[yellow]Not implemented yet — milestones 3 and 4.[/yellow]")
-    raise typer.Exit(code=3)
+def generate(
+    path: Path = typer.Argument(..., help="Path to a local repository."),
+    subdir: str = typer.Option(None, "--subdir", help="Restrict analysis to one subdirectory."),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Skip the model entirely and use structural explanations only.",
+    ),
+    model: str = typer.Option(DEFAULT_MODEL, "--model", help="Model used for explanations."),
+) -> None:
+    """Write grounded explanations and verification questions for each station.
+
+    Selection and ordering are already fixed by `plan`; this command only adds
+    prose and questions, and every piece of both must pass the grounding gate
+    before it is written out.
+    """
+    files = _load(path, subdir)
+    repo_graph = build(path, subdir)
+
+    stations = select_stations(repo_graph)
+    ordering = order_stations(repo_graph, stations)
+    by_path = {station.path: station for station in stations}
+    known_paths = frozenset(item.posix for item in files)
+    languages = {item.path: item.language for item in files}
+
+    pinned = head_commit(path) if is_git_repository(path) else None
+    if pinned is None:
+        console.print(
+            "[yellow]Not a git repository — the tour cannot be pinned to a commit, "
+            "so `check` will not be able to tell when it goes stale.[/yellow]"
+        )
+
+    generator = None
+    if not dry_run:
+        generator = CachingGenerator(
+            AnthropicGenerator(model=model), Path(path) / OUTPUT_DIR / "cache"
+        )
+
+    results = []
+    skipped: list[tuple[str, str]] = []
+
+    for station_path in ordering.stations:
+        station = by_path[station_path]
+        snippet = build_for_file(Path(path), station_path, languages[station_path])
+        fan_in = repo_graph.graph.in_degree(station_path)
+
+        try:
+            result = generate_station(
+                snippet=snippet,
+                layer=station.layer,
+                signals=repo_graph.score_breakdown.get(station_path, {}),
+                extra={"imported by": f"{fan_in} file(s) in this repository"},
+                known_paths=known_paths,
+                generator=generator,
+            )
+        except UnverifiableStation as exc:
+            skipped.append((station_path.as_posix(), str(exc)))
+            continue
+
+        results.append(result)
+
+    _report(path, results, skipped)
+    _write(Path(path), pinned, results)
+
+
+def _report(path: Path, results: list, skipped: list[tuple[str, str]]) -> None:
+    table = Table(title=f"{path.resolve().name} — generated stations", header_style="bold")
+    table.add_column("#", justify="right", style="dim")
+    table.add_column("File")
+    table.add_column("Source")
+    table.add_column("Q", justify="right")
+
+    colours = {
+        Provenance.MODEL: "green",
+        Provenance.MODEL_RETRY: "yellow",
+        Provenance.STRUCTURAL: "red",
+    }
+    for index, result in enumerate(results, start=1):
+        provenance = result.provenance
+        table.add_row(
+            str(index),
+            result.explanation.path,
+            f"[{colours[provenance]}]{provenance.value}[/{colours[provenance]}]",
+            str(len(result.explanation.questions)),
+        )
+    console.print(table)
+
+    # attempts == 0 means the model was never asked (--dry-run), which is not
+    # a fallback and must not be reported as one.
+    fell_back = [
+        r for r in results if r.provenance is Provenance.STRUCTURAL and r.attempts > 0
+    ]
+    if fell_back:
+        console.print(
+            f"[yellow]{len(fell_back)} station(s) fell back to structural text because "
+            "the model's output failed the grounding gate twice:[/yellow]"
+        )
+        for result in fell_back:
+            reasons = ", ".join(sorted({r.code for r in result.rejections})) or "model unavailable"
+            console.print(f"  [dim]{result.explanation.path}: {reasons}[/dim]")
+    elif results and all(r.attempts == 0 for r in results):
+        console.print(
+            "[dim]--dry-run: no model was called. Every station carries structural "
+            "text describing what the code contains, not what it is for.[/dim]"
+        )
+
+    for station_path, reason in skipped:
+        console.print(f"[red]Skipped {station_path}[/red]: {reason}")
+
+
+def _write(root: Path, pinned: str | None, results: list) -> None:
+    import json
+
+    directory = root / OUTPUT_DIR
+    directory.mkdir(parents=True, exist_ok=True)
+    destination = directory / "stations.json"
+
+    payload = {
+        "commit": pinned,
+        "stations": [
+            result.explanation.model_dump(mode="json") for result in results
+        ],
+    }
+    destination.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    console.print(f"Wrote [bold]{destination}[/bold]")
 
 
 @app.command()

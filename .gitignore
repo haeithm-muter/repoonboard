@@ -1,0 +1,29 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python bytecode and build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Test and coverage output
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Linter and type-checker caches
+.ruff_cache/
+.mypy_cache/
+
+# Editor directories
+.idea/
+.vscode/
+
+# Generated tours and the local generation cache
+.repoonboard/

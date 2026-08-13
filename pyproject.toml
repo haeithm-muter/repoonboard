@@ -11,6 +11,12 @@ dependencies = [
     "typer>=0.12",
     "rich>=13.7",
     "networkx>=3.2",
+    # networkx.pagerank delegates to its scipy implementation, which imports
+    # numpy and scipy directly. networkx declares both only under its optional
+    # "default" extra, so they must be requested explicitly or scoring raises
+    # ModuleNotFoundError on a clean install.
+    "numpy>=1.25",
+    "scipy>=1.11.2",
     "pydantic>=2.6",
     "tree-sitter>=0.23",
     "tree-sitter-python>=0.23",
